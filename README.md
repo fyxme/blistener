@@ -1,17 +1,17 @@
-Blistener (Blind-XSS listener)
+# Blistener (Blind-XSS listener)
 
 Code was written quickly during a CTF and should probably be refactored. Not going to change it for now since it's working. I'll refactor when I add new features to it.
 
 It has 2 exploits, one which will take all data available on the page including the html code and the other which will also take a screenshot of the page as well as all the data on the page.
 
 
-# Compiling
+## Compiling
 
 ```
 go build blistener.go
 ```
 
-# Usage
+## Usage
 
 1. Create an output directory where the listener will store html code and png images from the xss pages it identifies
 
@@ -50,7 +50,7 @@ _Note: The listener is on port 8899 by default, change to another port if you ne
 ![example trigger](.github/img/example.png)
 
 
-# Todo
+## Todo
 
 - Answer to OPTIONS requests
 - Add cli flags
