@@ -52,6 +52,5 @@ _Note: The listener is on port 8899 by default, change to another port if you ne
 
 ## Todo
 
-- Answer to OPTIONS requests
 - Add cli flags
 - Refactor code
