@@ -65,6 +65,12 @@ func getSha1HashFromString(s string) string {
 func corsHeader(f http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Access-Control-Allow-Origin", "*")
+
+        // OPTIONS preflight request
+        if r.Method == "OPTIONS" {
+            w.Header().Set("allow", "GET, POST, OPTIONS")
+            return
+        }
         f(w,r)
     }
 }
